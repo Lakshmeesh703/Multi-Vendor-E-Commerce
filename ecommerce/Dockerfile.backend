@@ -1,0 +1,7 @@
+FROM node:20-slim
+WORKDIR /app
+COPY ecommerce/backend/package.json package.json
+COPY ecommerce/backend/ .
+RUN npm install --production
+EXPOSE 4000
+CMD ["node","src/index.js"]

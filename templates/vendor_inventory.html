@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory - Vendor{% endblock %}
+
+{% block content %}
+<div class="vendor-inventory">
+    <h1>📋 Inventory Management</h1>
+    
+    {% if products %}
+    <table class="inventory-table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Current Stock</th>
+                <th>Price</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr>
+                <td>{{ product.name }}</td>
+                <td>{{ product.stock }}</td>
+                <td>${{ "%.2f"|format(product.price) }}</td>
+                <td>
+                    <form method="POST" action="/vendor/inventory/{{ product._id }}/update" class="inventory-update-form">
+                        <input type="number" name="stock" value="{{ product.stock }}" min="0" class="inventory-input">
+                        <button type="submit" class="btn btn-small">Update</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No products to manage.</p>
+    {% endif %}
+</div>
+{% endblock %}

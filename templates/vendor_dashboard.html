@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Vendor Dashboard - E-Commerce{% endblock %}
+
+{% block content %}
+<div class="vendor-dashboard">
+    <h1>🏪 Vendor Dashboard</h1>
+    
+    {% if vendor %}
+    <div class="vendor-info">
+        <h2>{{ vendor.store_name }}</h2>
+        <p>Status: <span class="badge badge-{{ vendor.approval_status }}">{{ vendor.approval_status|upper }}</span></p>
+    </div>
+    
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <h3>{{ total_products }}</h3>
+            <p>Total Products</p>
+        </div>
+        <div class="stat-card">
+            <h3>${{ "%.2f"|format(total_sales) }}</h3>
+            <p>Total Sales</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ recent_orders|length }}</h3>
+            <p>Recent Orders</p>
+        </div>
+    </div>
+    
+    <div class="dashboard-actions">
+        <a href="/vendor/products" class="btn btn-primary">📦 Manage Products</a>
+        <a href="/vendor/product/add" class="btn btn-primary">➕ Add Product</a>
+        <a href="/vendor/sales" class="btn btn-primary">📊 View Sales</a>
+        <a href="/vendor/inventory" class="btn btn-primary">📋 Manage Inventory</a>
+    </div>
+    
+    {% if recent_orders %}
+    <div class="recent-orders">
+        <h3>Recent Orders</h3>
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Status</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in recent_orders %}
+                <tr>
+                    <td>#{{ order.order_id }}</td>
+                    <td><span class="badge badge-{{ order.status }}">{{ order.status }}</span></td>
+                    <td>{{ order.quantity }}</td>
+                    <td>${{ "%.2f"|format(order.price * order.quantity) }}</td>
+                    <td>{{ order.created_at.strftime('%Y-%m-%d') if order.created_at else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% else %}
+    <p>Vendor account not found.</p>
+    {% endif %}
+</div>
+{% endblock %}

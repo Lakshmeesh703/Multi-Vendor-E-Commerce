@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Vendors - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-vendors">
+    <h1>🏪 Manage Vendors</h1>
+    
+    {% if vendors %}
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Store Name</th>
+                <th>Owner</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for vendor in vendors %}
+            <tr>
+                <td>{{ vendor.store_name }}</td>
+                <td>{{ vendor.name }}</td>
+                <td>{{ vendor.email }}</td>
+                <td><span class="badge badge-{{ vendor.approval_status }}">{{ vendor.approval_status|upper }}</span></td>
+                <td>{{ vendor.created_at.strftime('%Y-%m-%d') if vendor.created_at else 'N/A' }}</td>
+                <td>
+                    {% if vendor.approval_status == 'pending' %}
+                    <form method="POST" action="/admin/vendors/{{ vendor.id }}/approve" style="display: inline;">
+                        <button type="submit" class="btn btn-small btn-success">Approve</button>
+                    </form>
+                    <form method="POST" action="/admin/vendors/{{ vendor.id }}/reject" style="display: inline;">
+                        <button type="submit" class="btn btn-small btn-danger">Reject</button>
+                    </form>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No vendors found.</p>
+    {% endif %}
+</div>
+{% endblock %}

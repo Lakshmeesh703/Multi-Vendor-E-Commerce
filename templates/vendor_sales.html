@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Sales - Vendor{% endblock %}
+
+{% block content %}
+<div class="vendor-sales">
+    <h1>📊 Sales History</h1>
+    
+    {% if orders %}
+    <table class="sales-table">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>#{{ order.order_id }}</td>
+                <td>{{ order.name }}</td>
+                <td>{{ order.quantity }}</td>
+                <td>${{ "%.2f"|format(order.price) }}</td>
+                <td>${{ "%.2f"|format(order.price * order.quantity) }}</td>
+                <td><span class="badge badge-{{ order.status }}">{{ order.status }}</span></td>
+                <td>{{ order.created_at.strftime('%Y-%m-%d') if order.created_at else 'N/A' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No sales yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

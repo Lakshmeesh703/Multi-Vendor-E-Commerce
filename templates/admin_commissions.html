@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Commissions - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-commissions">
+    <h1>💰 Manage Commissions</h1>
+    
+    {% if commissions %}
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Store Name</th>
+                <th>Owner</th>
+                <th>Email</th>
+                <th>Commission %</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for commission in commissions %}
+            <tr>
+                <td>{{ commission.store_name }}</td>
+                <td>{{ commission.name }}</td>
+                <td>{{ commission.email }}</td>
+                <td>
+                    <form method="POST" action="/admin/commissions/{{ commission.id }}/update" style="display: flex; gap: 8px;">
+                        <input type="number" name="percentage" value="{{ commission.percentage }}" step="0.01" min="0" max="100" class="form-input" style="width: 100px;">
+                        <button type="submit" class="btn btn-small">Update</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No commissions found.</p>
+    {% endif %}
+</div>
+{% endblock %}

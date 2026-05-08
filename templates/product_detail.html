@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} - E-Commerce{% endblock %}
+
+{% block content %}
+<div class="product-detail-page">
+    <div class="product-detail">
+        <div class="product-image-large">📦</div>
+        
+        <div class="product-info">
+            <h1>{{ product.name }}</h1>
+            
+            <div class="product-meta">
+                <span class="category">{{ product.category }}</span>
+                {% if vendor %}
+                <span class="vendor">Sold by: {{ vendor.store_name }}</span>
+                {% endif %}
+            </div>
+            
+            <div class="product-price-section">
+                <h2 class="price">${{ "%.2f"|format(product.price) }}</h2>
+                {% if product.stock > 0 %}
+                <p class="stock in-stock">✓ In Stock ({{ product.stock }} available)</p>
+                {% else %}
+                <p class="stock out-of-stock">✗ Out of Stock</p>
+                {% endif %}
+            </div>
+            
+            {% if product.description %}
+            <div class="product-description">
+                <h3>Description</h3>
+                <p>{{ product.description }}</p>
+            </div>
+            {% endif %}
+            
+            {% if product.attributes %}
+            <div class="product-attributes">
+                <h3>Specifications</h3>
+                <ul>
+                    {% for key, value in product.attributes.items() %}
+                    <li><strong>{{ key|title }}:</strong> {{ value }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            {% if user_id and user_role == 'customer' and product.stock > 0 %}
+            <div class="product-actions">
+                <form method="POST" action="/customer/cart/add/{{ product._id }}" class="add-to-cart-form">
+                    <div class="quantity-selector">
+                        <label for="quantity">Quantity:</label>
+                        <input type="number" id="quantity" name="quantity" value="1" min="1" max="{{ product.stock }}" class="form-input quantity-input">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg">🛒 Add to Cart</button>
+                </form>
+                
+                <button onclick="addToWishlist('{{ product._id }}')" class="btn btn-secondary btn-lg">❤️ Wishlist</button>
+            </div>
+            {% elif not user_id %}
+            <div class="product-actions">
+                <a href="/auth/login" class="btn btn-primary btn-lg">Login to Purchase</a>
+            </div>
+            {% endif %}
+            
+            {% if product.reviews and product.reviews|length > 0 %}
+            <div class="product-reviews">
+                <h3>Customer Reviews</h3>
+                {% for review in product.reviews %}
+                <div class="review">
+                    <div class="review-rating">⭐ {{ review.rating }}/5</div>
+                    <p class="review-comment">{{ review.comment }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function addToWishlist(productId) {
+    fetch('/customer/wishlist/add/' + productId, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Added to wishlist!');
+        } else {
+            alert('Error: ' + data.message);
+        }
+    });
+}
+</script>
+{% endblock %}

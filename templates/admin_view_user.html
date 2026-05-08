@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}User Details - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-user-detail">
+    <h1>User: {{ user.name }}</h1>
+    
+    <div class="user-info">
+        <h3>Account Information</h3>
+        <div class="detail-row">
+            <span class="label">ID:</span>
+            <span>#{{ user.id }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Name:</span>
+            <span>{{ user.name }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Email:</span>
+            <span>{{ user.email }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Role:</span>
+            <span class="badge badge-{{ user.role }}">{{ user.role|upper }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Joined:</span>
+            <span>{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else 'N/A' }}</span>
+        </div>
+    </div>
+    
+    {% if user.role == 'customer' %}
+    {% if addresses %}
+    <div class="addresses-section">
+        <h3>Saved Addresses</h3>
+        <ul class="address-list">
+            {% for address in addresses %}
+            <li>
+                {{ address.address_line }}<br>
+                {{ address.city }}, {{ address.state }} {{ address.pincode }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    {% if orders %}
+    <div class="orders-section">
+        <h3>Order History</h3>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>#{{ order.id }}</td>
+                    <td>${{ "%.2f"|format(order.total_amount) }}</td>
+                    <td><span class="badge badge-{{ order.status }}">{{ order.status }}</span></td>
+                    <td>{{ order.created_at.strftime('%Y-%m-%d') if order.created_at else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% endif %}
+    
+    <a href="/admin/users" class="btn btn-secondary">Back to Users</a>
+</div>
+{% endblock %}

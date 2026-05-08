@@ -1,0 +1,146 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    MARKETPLACE QUICK START (LOCAL)                          ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📋 STEP 1: Install Services
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Choose ONE:
+
+  A) DOCKER (Easiest - all services in containers)
+     $ cd ecommerce
+     $ docker-compose up -d
+     ✓ Starts PostgreSQL, MongoDB, Redis, Backend
+     
+  B) LOCAL (Manual - install each service)
+     $ brew install postgresql mongodb-community redis   # macOS
+     $ sudo apt-get install postgresql mongodb redis     # Linux
+     
+     Then start each in separate terminals:
+     • Terminal 1: postgres -D /usr/local/var/postgres
+     • Terminal 2: mongod
+     • Terminal 3: redis-server
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 STEP 2: Initialize Database
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  $ createdb ecommerce
+  $ psql ecommerce < ecommerce/backend/src/db/schema.sql
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌱 STEP 3: Seed Sample Data
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  $ cd ecommerce/backend
+  $ npm run seed
+  
+  Creates:
+  ✓ 6 sample products (Laptop, Headset, Charger, Shoes, Shirt, Jacket)
+  ✓ 2 vendors (TechZone Electronics, Fashion Hub)
+  ✓ Test users (vendor@techzone.com, customer@example.com)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 STEP 4: Run the Servers
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Terminal A (Backend):
+  $ cd ecommerce/backend && npm run start
+  ✓ Listening on http://localhost:4000
+
+  Terminal B (Frontend):
+  $ cd ecommerce/frontend && npm run dev
+  ✓ Listening on http://localhost:5173
+
+════════════════════════════════════════════════════════════════════════════
+
+🌐 OPEN IN BROWSER: http://localhost:5173
+   
+   You'll see:
+   • Homepage with featured products
+   • Search bar + category filter
+   • Add to Cart buttons (pre-populated with sample products)
+   • Cart page showing 3 items
+   • Vendor Dashboard with stats
+   • Admin Panel with approval controls
+
+════════════════════════════════════════════════════════════════════════════
+
+📱 Front-End Routes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  /                      Home
+  /products              Product catalog with filters
+  /products/:id          Product detail
+  /cart                  Shopping cart
+  /wishlist              Saved items
+  /checkout              Address + payment
+  /vendor                Vendor dashboard
+  /admin                 Admin panel
+  /account               Login / signup
+
+════════════════════════════════════════════════════════════════════════════
+
+🧪 Sample Products in System
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. UltraView 14" Laptop        $899   (4.8★ 214 reviews)
+  2. Smart Noise-Cancel Headset  $129   (4.9★ 301 reviews)
+  3. USB-C Fast Charger 30W      $19.99 (4.7★ 523 reviews)
+  4. StreetFlex Premium Sneakers $69.99 (4.7★ 98 reviews)
+  5. Everyday Cotton T-Shirt     $29.99 (4.6★ 147 reviews)
+  6. Classic Denim Jacket        $79.99 (4.8★ 256 reviews)
+
+════════════════════════════════════════════════════════════════════════════
+
+⚙️  Backend API
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Products:
+    GET /api/products?category=Electronics&sort=price_low
+    
+  Cart (header: x-cart-token):
+    GET /api/cart
+    POST /api/cart/items { product_mongo_id, quantity }
+    DELETE /api/cart/items/:productId
+    
+  Wishlist (header: x-wishlist-token):
+    GET /api/wishlist
+    POST /api/wishlist/items { product_mongo_id }
+    DELETE /api/wishlist/items/:productId
+    
+  Auth:
+    POST /api/auth/register { email, password, first_name, last_name }
+    POST /api/auth/login { email, password }
+    POST /api/auth/vendor/request { user_id, name, city, country }
+
+════════════════════════════════════════════════════════════════════════════
+
+🔐 Test Credentials (after seeding)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Vendor:
+    Email:    vendor@techzone.com
+    Password: vendor123
+    
+  Customer:
+    Email:    customer@example.com
+    Password: customer123
+
+════════════════════════════════════════════════════════════════════════════
+
+💬 Notes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • Cart is persisted to backend (no login required)
+  • Products filter in real-time
+  • Use `npm run seed` to reset sample data
+  • Backend + Frontend both run on separate ports (4000 and 5173)
+  • Vite dev server proxies /api calls to backend
+
+For detailed setup & troubleshooting, see: ecommerce/SETUP.md
+
+════════════════════════════════════════════════════════════════════════════

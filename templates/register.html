@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Register - E-Commerce{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <h1>Register</h1>
+        <p class="auth-subtitle">Create a new account</p>
+        
+        <form method="POST" class="form">
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" name="name" required class="form-input">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" required class="form-input">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required class="form-input">
+            </div>
+            
+            <div class="form-group">
+                <label for="password_confirm">Confirm Password</label>
+                <input type="password" id="password_confirm" name="password_confirm" required class="form-input">
+            </div>
+            
+            <div class="form-group">
+                <label for="role">Account Type</label>
+                <select id="role" name="role" required class="form-input" onchange="toggleVendorField()">
+                    <option value="customer">Customer</option>
+                    <option value="vendor">Vendor</option>
+                </select>
+            </div>
+            
+            <div id="vendor-field" class="form-group" style="display: none;">
+                <label for="store_name">Store Name</label>
+                <input type="text" id="store_name" name="store_name" class="form-input" placeholder="Your Store Name">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+        </form>
+        
+        <div class="auth-footer">
+            <p>Already have an account? <a href="/auth/login">Login here</a></p>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleVendorField() {
+    const role = document.getElementById('role').value;
+    const vendorField = document.getElementById('vendor-field');
+    vendorField.style.display = role === 'vendor' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

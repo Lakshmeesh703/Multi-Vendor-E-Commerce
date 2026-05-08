@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Home - E-Commerce{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>Welcome to E-Commerce Platform</h1>
+    <p>Discover amazing products from trusted vendors</p>
+    {% if not user_id %}
+    <div class="hero-actions">
+        <a href="/auth/register" class="btn btn-primary btn-lg">Get Started</a>
+        <a href="/customer/products" class="btn btn-secondary btn-lg">Browse Products</a>
+    </div>
+    {% else %}
+    <div class="hero-actions">
+        <a href="/customer/products" class="btn btn-primary btn-lg">Shop Now</a>
+    </div>
+    {% endif %}
+</div>
+
+<section class="featured-products">
+    <h2>Featured Products</h2>
+    
+    {% if products %}
+    <div class="products-grid">
+        {% for product in products %}
+        <div class="product-card">
+            <div class="product-image">📦</div>
+            <h3>{{ product.name }}</h3>
+            <p class="category">{{ product.category }}</p>
+            <p class="price">${{ "%.2f"|format(product.price) }}</p>
+            <p class="stock">Stock: {{ product.stock }}</p>
+            
+            <div class="product-actions">
+                <a href="/customer/product/{{ product._id }}" class="btn btn-small">View Details</a>
+                {% if user_id %}
+                <form method="POST" action="/customer/cart/add/{{ product._id }}" class="quick-add">
+                    <input type="hidden" name="quantity" value="1">
+                    <button type="submit" class="btn btn-small btn-primary">Add to Cart</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>No products available yet.</p>
+    {% endif %}
+</section>
+
+<section class="info-section">
+    <div class="info-item">
+        <h3>🚚 Fast Shipping</h3>
+        <p>Quick and reliable delivery to your doorstep</p>
+    </div>
+    <div class="info-item">
+        <h3>🔒 Secure Payments</h3>
+        <p>Multiple payment options with SSL encryption</p>
+    </div>
+    <div class="info-item">
+        <h3>⭐ Quality Products</h3>
+        <p>Curated selection from trusted vendors</p>
+    </div>
+</section>
+{% endblock %}

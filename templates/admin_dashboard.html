@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - E-Commerce{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <h1>🛡️ Admin Dashboard</h1>
+    
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <h3>{{ total_users }}</h3>
+            <p>Total Customers</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ total_vendors }}</h3>
+            <p>Total Vendors</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ pending_vendors }}</h3>
+            <p>Pending Approvals</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ total_orders }}</h3>
+            <p>Total Orders</p>
+        </div>
+        <div class="stat-card">
+            <h3>${{ "%.2f"|format(total_revenue) }}</h3>
+            <p>Total Revenue</p>
+        </div>
+    </div>
+    
+    <div class="admin-actions">
+        <a href="/admin/users" class="btn btn-primary">👥 Manage Users</a>
+        <a href="/admin/vendors" class="btn btn-primary">🏪 Manage Vendors</a>
+        <a href="/admin/commissions" class="btn btn-primary">💰 Manage Commissions</a>
+        <a href="/admin/orders" class="btn btn-primary">📦 View Orders</a>
+        <a href="/admin/reports" class="btn btn-primary">📊 View Reports</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}E-Commerce Platform{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <a href="/" class="logo">🛍️ E-Commerce</a>
+            </div>
+            
+            <div class="navbar-menu">
+                <div class="navbar-start">
+                    <a href="/" class="nav-link">Home</a>
+                    <a href="/customer/products" class="nav-link">Products</a>
+                </div>
+                
+                <div class="navbar-end">
+                    {% if user_id %}
+                        {% if user_role == 'admin' %}
+                            <a href="/admin/dashboard" class="nav-link">Admin Panel</a>
+                        {% elif user_role == 'vendor' %}
+                            <a href="/vendor/dashboard" class="nav-link">Vendor Dashboard</a>
+                        {% else %}
+                            <a href="/customer/cart" class="nav-link">🛒 Cart</a>
+                            <a href="/customer/wishlist" class="nav-link">❤️ Wishlist</a>
+                            <a href="/customer/orders" class="nav-link">Orders</a>
+                        {% endif %}
+                        
+                        <div class="nav-user">
+                            <span class="user-badge">{{ user_name }}</span>
+                            <a href="/auth/logout" class="nav-link logout">Logout</a>
+                        </div>
+                    {% else %}
+                        <a href="/auth/login" class="nav-link">Login</a>
+                        <a href="/auth/register" class="nav-link btn-primary">Register</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    {{ message }}
+                    <button class="alert-close" onclick="this.parentElement.style.display='none';">×</button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Page Content -->
+    <main class="main-content">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Multi-Vendor E-Commerce Platform. All rights reserved.</p>
+            <p>Built with Flask, PostgreSQL & MongoDB | 3NF Normalized Database Design</p>
+        </div>
+    </footer>
+
+    <script>
+        // Auto-hide alerts after 5 seconds
+        window.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    alert.style.opacity = '0';
+                    setTimeout(() => alert.remove(), 300);
+                }, 5000);
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

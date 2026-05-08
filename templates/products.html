@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Products - E-Commerce{% endblock %}
+
+{% block content %}
+<div class="products-page">
+    <div class="sidebar">
+        <h3>Filters</h3>
+        <form method="GET" class="filter-form">
+            <div class="filter-group">
+                <label for="category">Category</label>
+                <select id="category" name="category" class="form-input">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="min_price">Min Price: $<span id="min_val">0</span></label>
+                <input type="range" id="min_price" name="min_price" value="0" max="5000" step="50">
+            </div>
+            
+            <div class="filter-group">
+                <label for="max_price">Max Price: $<span id="max_val">5000</span></label>
+                <input type="range" id="max_price" name="max_price" value="5000" max="5000" step="50">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
+        </form>
+    </div>
+    
+    <div class="products-main">
+        <h1>Browse Products</h1>
+        
+        {% if products %}
+        <div class="products-grid">
+            {% for product in products %}
+            <div class="product-card">
+                <div class="product-image">📦</div>
+                <div class="product-info">
+                    <h3>{{ product.name }}</h3>
+                    <p class="category">{{ product.category }}</p>
+                    {% if product.stock > 0 %}
+                    <p class="price">${{ "%.2f"|format(product.price) }}</p>
+                    <p class="stock in-stock">✓ In Stock ({{ product.stock }})</p>
+                    {% else %}
+                    <p class="price" style="text-decoration: line-through;">${{ "%.2f"|format(product.price) }}</p>
+                    <p class="stock out-of-stock">✗ Out of Stock</p>
+                    {% endif %}
+                </div>
+                
+                <div class="product-actions">
+                    <a href="/customer/product/{{ product._id }}" class="btn btn-small">View Details</a>
+                    {% if user_id and user_role == 'customer' and product.stock > 0 %}
+                    <form method="POST" action="/customer/cart/add/{{ product._id }}" class="quick-add">
+                        <input type="hidden" name="quantity" value="1">
+                        <button type="submit" class="btn btn-small btn-primary">Add to Cart</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="no-products">No products found. Try adjusting your filters.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.getElementById('min_price').addEventListener('input', function() {
+    document.getElementById('min_val').textContent = this.value;
+});
+document.getElementById('max_price').addEventListener('input', function() {
+    document.getElementById('max_val').textContent = this.value;
+});
+</script>
+{% endblock %}
