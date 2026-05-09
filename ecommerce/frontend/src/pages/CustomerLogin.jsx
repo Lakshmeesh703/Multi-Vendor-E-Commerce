@@ -21,7 +21,7 @@ export default function CustomerLogin() {
     try {
       const res = await loginCustomer(email, password)
       if (res?.token && res.user?.role === 'customer') {
-        setAuthToken(res.token)
+        setAuthToken(res.token, 'customer')
         navigate('/shop')
       } else {
         setError('Invalid customer credentials')

@@ -13,7 +13,7 @@ export default function AdminLogin() {
   useEffect(() => {
     const handler = (event) => {
       if (event.data?.type === 'vendorhub-oauth' && event.data?.user?.role === 'admin') {
-        setAuthToken(event.data.token)
+        setAuthToken(event.data.token, 'admin')
         navigate('/admin-dashboard')
       }
     }
@@ -32,7 +32,7 @@ export default function AdminLogin() {
     try {
       const res = await loginAdmin(email, password)
       if (res?.token && res.user?.role === 'admin') {
-        setAuthToken(res.token)
+        setAuthToken(res.token, 'admin')
         navigate('/admin-dashboard')
       } else {
         setError('Invalid admin credentials')

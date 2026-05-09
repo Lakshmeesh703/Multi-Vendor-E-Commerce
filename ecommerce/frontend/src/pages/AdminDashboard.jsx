@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchAdminPendingVendors, fetchAdminSummary, approveVendor, getAuthUserId } from '../api'
+import { fetchAdminPendingVendors, fetchAdminSummary, approveVendor, rejectVendor, getAuthUserId } from '../api'
 import '../styles/DashboardPages.css'
 
 export default function AdminDashboard() {
@@ -10,7 +10,7 @@ export default function AdminDashboard() {
   const [pendingVendors, setPendingVendors] = useState([])
 
   useEffect(() => {
-    const userId = getAuthUserId()
+    const userId = getAuthUserId('admin')
     setUser({ id: userId, name: 'Platform Admin' })
   }, [])
 
@@ -26,10 +26,21 @@ export default function AdminDashboard() {
     { label: 'Go to home', description: 'Return to the public storefront', onClick: () => navigate('/') },
   ]), [navigate])
 
+  const refreshPendingQueue = async () => {
+    const nextSummary = await fetchAdminSummary()
+    const next = await fetchAdminPendingVendors()
+    setSummary(nextSummary)
+    setPendingVendors(next)
+  }
+
   const handleApprove = async (vendorId) => {
     await approveVendor(vendorId)
-    const next = await fetchAdminPendingVendors()
-    setPendingVendors(next)
+    await refreshPendingQueue()
+  }
+
+  const handleReject = async (vendorId) => {
+    await rejectVendor(vendorId)
+    await refreshPendingQueue()
   }
 
   return (
@@ -138,7 +149,10 @@ export default function AdminDashboard() {
                   <td>{vendor.description || vendor.store_description || 'General'}</td>
                   <td>{vendor.created_at ? new Date(vendor.created_at).toLocaleDateString() : '—'}</td>
                   <td>
-                    <button className="btn-small btn-approve" onClick={() => handleApprove(vendor.id)}>Approve</button>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button className="btn-small btn-approve" onClick={() => handleApprove(vendor.id)}>Approve</button>
+                      <button className="btn-small btn-reject" onClick={() => handleReject(vendor.id)}>Not Approve</button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -170,7 +184,7 @@ export default function AdminDashboard() {
           <div className="health-grid">
             <div className="health-item">
               <p className="health-label">Database</p>
-              <p className="health-status healthy">✓ Healthy</p>
+              <p className="health-status healthy">{summary?.dbName ? `✓ ${summary.dbName} (${summary.dbSize || '—'})` : 'Unknown'}</p>
             </div>
             <div className="health-item">
               <p className="health-label">API Server</p>

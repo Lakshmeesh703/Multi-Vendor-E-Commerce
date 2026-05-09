@@ -2,6 +2,36 @@
 // The SQL order becomes the source of truth; Mongo only supplies catalog data.
 
 const Product = require('../models/product_mongo');
+const mongoose = require('mongoose');
+
+function normalizeSnapshot(snapshot) {
+  if (!snapshot) return null;
+  if (typeof snapshot === 'string') {
+    try {
+      return JSON.parse(snapshot);
+    } catch {
+      return null;
+    }
+  }
+  if (typeof snapshot === 'object') return snapshot;
+  return null;
+}
+
+function mapSnapshotToProduct(source, fallbackId) {
+  if (!source) return null;
+  return {
+    _id: String(source.product_mongo_id || source._id || fallbackId || ''),
+    title: source.title || 'Product',
+    description: source.description || '',
+    category: source.category || '',
+    vendor_id: source.vendor_id || null,
+    currency: source.currency || 'INR',
+    attributes: source.attributes || {},
+    inventory: source.inventory || {},
+    price: Number(source.price || 0),
+    images: Array.isArray(source.images) ? source.images : [],
+  };
+}
 
 function buildSnapshot(product, quantity, resolvedPrice) {
   return {
@@ -30,12 +60,47 @@ async function createOrder(pgPool, mongoConn, payload) {
     const enrichedItems = [];
 
     for (const item of items) {
-      const product = await Product.findById(item.product_mongo_id).lean();
-      if (!product) throw new Error('Product not found: ' + item.product_mongo_id);
+      const productId = String(item.product_mongo_id || '').trim();
+      if (!productId) throw new Error('product_mongo_id is required');
+
+      let product = null;
+      let productSource = 'none';
+
+      const snapshotRes = await client.query(
+        `SELECT product_mongo_id, title, description, category, vendor_id, currency, price, images
+         FROM product_snapshots
+         WHERE product_mongo_id = $1
+         LIMIT 1`,
+        [productId]
+      );
+      if (snapshotRes.rows[0]) {
+        product = mapSnapshotToProduct(snapshotRes.rows[0], productId);
+        productSource = 'postgres';
+      }
+
+      if (!product) {
+        const payloadSnapshot = normalizeSnapshot(item.product_snapshot);
+        if (payloadSnapshot) {
+          product = mapSnapshotToProduct(payloadSnapshot, productId);
+          productSource = 'payload';
+        }
+      }
+
+      if (!product && mongoose.Types.ObjectId.isValid(productId)) {
+        product = await Product.findById(productId).lean();
+        if (product) productSource = 'mongo';
+      }
+
+      if (!product) throw new Error('Product not found: ' + productId);
+
       const quantity = Number(item.quantity || 1);
-      const unitPrice = Number(item.unit_price ?? product.price ?? 0);
-      if (!Number.isFinite(quantity) || quantity <= 0) throw new Error('Invalid quantity for ' + item.product_mongo_id);
-      if (!Number.isFinite(unitPrice) || unitPrice < 0) throw new Error('Invalid price for ' + item.product_mongo_id);
+      const dbPrice = Number(product.price);
+      const requestPrice = Number(item.unit_price);
+      const unitPrice = Number.isFinite(dbPrice) && dbPrice > 0
+        ? dbPrice
+        : (Number.isFinite(requestPrice) && requestPrice > 0 ? requestPrice : NaN);
+      if (!Number.isFinite(quantity) || quantity <= 0) throw new Error('Invalid quantity for ' + productId);
+      if (!Number.isFinite(unitPrice) || unitPrice <= 0) throw new Error('Invalid price for ' + productId);
       total += unitPrice * quantity;
       enrichedItems.push({
         product,
@@ -43,6 +108,7 @@ async function createOrder(pgPool, mongoConn, payload) {
         unitPrice,
         vendorId: item.vendor_id || product.vendor_id || null,
         snapshot: buildSnapshot(product, quantity, unitPrice),
+        source: productSource,
       });
     }
 
@@ -74,12 +140,14 @@ async function createOrder(pgPool, mongoConn, payload) {
 
     await client.query('COMMIT');
 
-    const inventoryUpdates = enrichedItems.map(item =>
-      Product.updateOne(
-        { _id: item.product._id, 'inventory.quantity': { $gte: item.quantity } },
-        { $inc: { 'inventory.quantity': -item.quantity } }
-      ).exec()
-    );
+    const inventoryUpdates = enrichedItems
+      .filter((item) => item.source === 'mongo' && mongoose.Types.ObjectId.isValid(String(item.product?._id || '')))
+      .map((item) =>
+        Product.updateOne(
+          { _id: item.product._id, 'inventory.quantity': { $gte: item.quantity } },
+          { $inc: { 'inventory.quantity': -item.quantity } }
+        ).exec()
+      );
     await Promise.all(inventoryUpdates);
 
     return {

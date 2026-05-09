@@ -7,6 +7,7 @@ const { Pool } = require('pg');
 const Product = require('./src/models/product_mongo');
 const VendorModel = require('./src/models/Vendor');
 const CustomerModel = require('./src/models/Customer');
+const AdminModel = require('./src/models/Admin');
 const orderService = require('./src/services/orderService');
 
 const SEED_PRODUCTS = Number(process.env.SEED_PRODUCTS || 500);
@@ -121,9 +122,24 @@ async function ensurePgVendorRow(pgPool, { userId, shopName }) {
 async function ensureMongoAccount(Model, { name, email, passwordHash, extra = {} }) {
   const normalizedEmail = String(email).trim().toLowerCase();
   const existing = await Model.findOne({ email: normalizedEmail }).lean();
-  if (existing) return existing;
+  if (existing) {
+    await Model.updateOne(
+      { email: normalizedEmail },
+      { $set: { name, password: passwordHash, ...extra } }
+    );
+    return { ...existing, name, password: passwordHash, ...extra };
+  }
   const doc = await Model.create({ name, email: normalizedEmail, password: passwordHash, ...extra });
   return doc.toObject();
+}
+
+async function ensureDemoAccount({ Model, role, name, email, passwordHash, extra = {} }) {
+  await ensureMongoAccount(Model, {
+    name,
+    email,
+    passwordHash,
+    extra: { role, ...extra },
+  });
 }
 
 async function createLegacyOrder(pgPool, payload) {
@@ -277,6 +293,32 @@ async function run() {
 
   const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
 
+  // Demo accounts for the login pages.
+  await ensureDemoAccount({
+    Model: CustomerModel,
+    role: 'customer',
+    name: 'Customer',
+    email: 'customer@vendorhub.local',
+    passwordHash: await bcrypt.hash('customer123', 10),
+    extra: { address: 'Demo Customer Address', cart: [], orders: [] },
+  });
+  await ensureDemoAccount({
+    Model: VendorModel,
+    role: 'vendor',
+    name: 'Vendor',
+    email: 'vendor@vendorhub.local',
+    passwordHash: await bcrypt.hash('vendor123', 10),
+    extra: { shopName: 'VendorHub Store', gstNumber: 'GST-DEMO-VENDOR', phone: '+91-9000000001' },
+  });
+  await ensureDemoAccount({
+    Model: AdminModel,
+    role: 'admin',
+    name: 'Admin',
+    email: 'admin@vendorhub.local',
+    passwordHash: await bcrypt.hash('admin123', 10),
+    extra: {},
+  });
+
   // 1) Create vendors + customers in Mongo and Postgres
   const vendors = [];
   for (let i = 1; i <= SEED_VENDORS; i++) {
@@ -378,9 +420,12 @@ async function run() {
   console.log(`\n🎉 Seed complete.`);
   console.log(`- Inserted products (this run): ${finalInsert.length}`);
   console.log(`- Inserted orders: ${createdOrders}`);
-  console.log(`\nLogin (all seeded accounts use password: ${SEED_PASSWORD})`);
-  console.log(`- Vendors: seed-vendor1@vendorhub.local .. seed-vendor${SEED_VENDORS}@vendorhub.local`);
-  console.log(`- Customers: seed-customer1@vendorhub.local .. seed-customer${SEED_CUSTOMERS}@vendorhub.local`);
+  console.log('\nLogin accounts created/updated:');
+  console.log('- Customer: customer@vendorhub.local / customer123');
+  console.log('- Vendor:   vendor@vendorhub.local / vendor123');
+  console.log('- Admin:    admin@vendorhub.local / admin123');
+  console.log(`- Other seeded vendors: seed-vendor1@vendorhub.local .. seed-vendor${SEED_VENDORS}@vendorhub.local (password: ${SEED_PASSWORD})`);
+  console.log(`- Other seeded customers: seed-customer1@vendorhub.local .. seed-customer${SEED_CUSTOMERS}@vendorhub.local (password: ${SEED_PASSWORD})`);
 
   } finally {
     await pgPool.end().catch(() => {});

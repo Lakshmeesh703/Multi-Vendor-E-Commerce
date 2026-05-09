@@ -1,5 +1,11 @@
 const API_BASE = ''
 const AUTH_TOKEN_KEY = 'marketwave_auth_token'
+const AUTH_TOKEN_KEYS = {
+  default: AUTH_TOKEN_KEY,
+  admin: 'marketwave_auth_token_admin',
+  vendor: 'marketwave_auth_token_vendor',
+  customer: 'marketwave_auth_token_customer',
+}
 
 function getToken(key) {
   if (typeof window === 'undefined') return ''
@@ -10,22 +16,36 @@ function getToken(key) {
   return value
 }
 
-function getAuthToken() {
+function getAuthToken(role = 'default') {
   if (typeof window === 'undefined') return ''
-  return window.localStorage.getItem(AUTH_TOKEN_KEY) || ''
+  const key = AUTH_TOKEN_KEYS[role] || AUTH_TOKEN_KEYS.default
+  if (role !== 'default') {
+    return window.localStorage.getItem(key) || ''
+  }
+  return (
+    window.localStorage.getItem(AUTH_TOKEN_KEYS.default) ||
+    window.localStorage.getItem(AUTH_TOKEN_KEYS.vendor) ||
+    window.localStorage.getItem(AUTH_TOKEN_KEYS.admin) ||
+    window.localStorage.getItem(AUTH_TOKEN_KEYS.customer) ||
+    ''
+  )
 }
 
-function setAuthToken(token) {
+function setAuthToken(token, role = 'default') {
   if (typeof window === 'undefined') return
+  const key = AUTH_TOKEN_KEYS[role] || AUTH_TOKEN_KEYS.default
   if (!token) {
-    window.localStorage.removeItem(AUTH_TOKEN_KEY)
+    window.localStorage.removeItem(key)
     return
   }
-  window.localStorage.setItem(AUTH_TOKEN_KEY, token)
+  if (key !== AUTH_TOKEN_KEYS.default) {
+    window.localStorage.removeItem(AUTH_TOKEN_KEYS.default)
+  }
+  window.localStorage.setItem(key, token)
 }
 
-function getAuthUserId() {
-  const token = getAuthToken()
+function getAuthUserId(role = 'default') {
+  const token = getAuthToken(role)
   if (!token) return null
   const parts = token.split('.')
   if (parts.length !== 3) return null
@@ -48,11 +68,11 @@ async function rawRequest(path, options = {}) {
   })
 }
 
-async function request(path, options = {}, retryOn401 = true) {
+async function request(path, options = {}, retryOn401 = true, authRole = 'default') {
   const response = await rawRequest(path, options)
   if (!response.ok) {
     if (response.status === 401 && retryOn401 && path !== '/api/auth/refresh') {
-      const refreshed = await refreshAuthToken()
+      const refreshed = await refreshAuthToken(authRole)
       if (refreshed) {
         const retryResponse = await rawRequest(path, options)
         if (retryResponse.ok) return retryResponse.json()
@@ -66,24 +86,24 @@ async function request(path, options = {}, retryOn401 = true) {
   return response.json()
 }
 
-async function authenticatedRequest(path, options = {}) {
-  const token = getAuthToken()
+async function authenticatedRequest(path, options = {}, role = 'default') {
+  const token = getAuthToken(role)
   return request(path, {
     ...options,
     headers: {
       ...(options.headers || {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-  })
+  }, true, role)
 }
 
-export async function refreshAuthToken() {
+export async function refreshAuthToken(role = 'default') {
   try {
     const response = await rawRequest('/api/auth/refresh', { method: 'POST' }, false)
     if (!response.ok) return null
     const data = await response.json()
     if (data?.token) {
-      setAuthToken(data.token)
+      setAuthToken(data.token, role)
       return data.token
     }
     return null
@@ -105,12 +125,16 @@ export async function fetchCart() {
   return request('/api/cart', { headers: { 'x-cart-token': cartToken } })
 }
 
-export async function addToCart(productId, quantity = 1) {
+export async function addToCart(productId, quantity = 1, productSnapshot = null) {
   const cartToken = getToken('marketwave_cart_token')
   return request('/api/cart/items', {
     method: 'POST',
     headers: { 'x-cart-token': cartToken },
-    body: JSON.stringify({ product_mongo_id: productId, quantity }),
+    body: JSON.stringify({
+      product_mongo_id: productId,
+      quantity,
+      product_snapshot: productSnapshot,
+    }),
   })
 }
 
@@ -145,6 +169,10 @@ export async function fetchAdminPendingVendors() {
 
 export async function approveVendor(vendorId) {
   return authenticatedRequest(`/api/admin/vendors/${vendorId}/approve`, { method: 'POST' })
+}
+
+export async function rejectVendor(vendorId) {
+  return authenticatedRequest(`/api/admin/vendors/${vendorId}/reject`, { method: 'POST' })
 }
 
 export async function fetchVendorSummary() {
@@ -223,49 +251,49 @@ export async function loginUser(email, password) {
     method: 'POST',
     body: JSON.stringify({ email, password })
   })
-  if (res?.token) setAuthToken(res.token)
+  if (res?.token) setAuthToken(res.token, 'customer')
   return res
 }
 
 export async function loginAdmin(email, password) {
   const res = await request('/api/admin/login', { method: 'POST', body: JSON.stringify({ email, password }) })
-  if (res?.token) setAuthToken(res.token)
+  if (res?.token) setAuthToken(res.token, 'admin')
   return res
 }
 
 export async function loginVendor(email, password) {
   const res = await request('/api/vendor/login', { method: 'POST', body: JSON.stringify({ email, password }) })
-  if (res?.token) setAuthToken(res.token)
+  if (res?.token) setAuthToken(res.token, 'vendor')
   return res
 }
 
 export async function loginCustomer(email, password) {
   const res = await request('/api/customer/login', { method: 'POST', body: JSON.stringify({ email, password }) })
-  if (res?.token) setAuthToken(res.token)
+  if (res?.token) setAuthToken(res.token, 'customer')
   return res
 }
 
 export async function registerCustomer(payload) {
   const res = await request('/api/customer/register', { method: 'POST', body: JSON.stringify(payload) })
-  if (res?.token) setAuthToken(res.token)
+  if (res?.token) setAuthToken(res.token, 'customer')
   return res
 }
 
 export async function registerVendor(payload) {
   const res = await request('/api/vendor/register', { method: 'POST', body: JSON.stringify(payload) })
-  if (res?.token) setAuthToken(res.token)
+  if (res?.token) setAuthToken(res.token, 'vendor')
   return res
 }
 
 export async function registerAdmin(payload) {
   const res = await request('/api/admin/register', { method: 'POST', body: JSON.stringify(payload) })
-  if (res?.token) setAuthToken(res.token)
+  if (res?.token) setAuthToken(res.token, 'admin')
   return res
 }
 
 export async function createOrder(payload) {
   // payload: { user_id?, shipping_address_id?, items: [{ product_mongo_id, quantity, vendor_id, unit_price }], currency?: 'INR' }
-  const token = getAuthToken()
+  const token = getAuthToken('customer') || getAuthToken()
   return request('/api/orders', {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},

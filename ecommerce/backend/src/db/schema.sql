@@ -94,11 +94,29 @@ CREATE TABLE carts (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
+-- Product snapshot cache for cart/billing (fallback when MongoDB is unavailable)
+CREATE TABLE product_snapshots (
+  product_mongo_id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  price NUMERIC(12,2) NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'INR',
+  vendor_id INTEGER,
+  vendor_name TEXT,
+  category TEXT,
+  images TEXT[] DEFAULT '{}',
+  rating NUMERIC(3,1) DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
 CREATE TABLE cart_token_items (
   id BIGSERIAL PRIMARY KEY,
   cart_token TEXT NOT NULL REFERENCES carts(cart_token) ON DELETE CASCADE,
   product_mongo_id TEXT NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 1,
+  unit_price NUMERIC(12,2) DEFAULT 0,
+  product_snapshot JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   UNIQUE(cart_token, product_mongo_id)
 );

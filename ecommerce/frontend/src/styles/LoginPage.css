@@ -8,6 +8,18 @@
   padding: 20px;
 }
 
+.login-container.role-customer {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-container.role-vendor {
+  background: linear-gradient(135deg, #764ba2 0%, #f093fb 100%);
+}
+
+.login-container.role-admin {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
 .login-card {
   background: white;
   border-radius: 12px;
@@ -95,6 +107,21 @@
   color: white;
 }
 
+.role-btn.role-customer.active {
+  border-color: #667eea;
+  background: #667eea;
+}
+
+.role-btn.role-vendor.active {
+  border-color: #7c3aed;
+  background: linear-gradient(135deg, #7c3aed, #c026d3);
+}
+
+.role-btn.role-admin.active {
+  border-color: #db2777;
+  background: linear-gradient(135deg, #db2777, #f59e0b);
+}
+
 .role-icon {
   font-size: 18px;
 }
@@ -166,6 +193,40 @@
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.login-btn.role-vendor {
+  background: linear-gradient(135deg, #7c3aed 0%, #c026d3 100%);
+}
+
+.login-btn.role-admin {
+  background: linear-gradient(135deg, #db2777 0%, #f59e0b 100%);
+}
+
+.google-btn {
+  width: 100%;
+  padding: 11px;
+  margin-top: 10px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.25s ease;
+}
+
+.google-btn:hover {
+  border-color: #9ca3af;
+  background: #f9fafb;
+}
+
+.form-help {
+  display: block;
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 12px;
 }
 
 .login-btn:hover:not(:disabled) {

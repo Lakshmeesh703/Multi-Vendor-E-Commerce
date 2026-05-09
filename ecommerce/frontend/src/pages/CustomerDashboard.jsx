@@ -8,7 +8,7 @@ export default function CustomerDashboard() {
   const [summary, setSummary] = useState(null)
 
   useEffect(() => {
-    setUser({ id: getAuthUserId(), name: 'Customer' })
+    setUser({ id: getAuthUserId('customer'), name: 'Customer' })
     fetchCustomerSummary().then(setSummary).catch(() => setSummary(null))
   }, [])
 

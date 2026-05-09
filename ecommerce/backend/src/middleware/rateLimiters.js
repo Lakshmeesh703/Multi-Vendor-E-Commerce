@@ -6,7 +6,7 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts, please try again later.' },
-  skipSuccessfulRequests: false,
+  skipSuccessfulRequests: true,
 });
 
 module.exports = { loginLimiter };

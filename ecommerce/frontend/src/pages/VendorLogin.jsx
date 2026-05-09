@@ -10,6 +10,21 @@ export default function VendorLogin() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.data?.type === 'vendorhub-oauth' && event.data?.user?.role === 'vendor') {
+        setAuthToken(event.data.token, 'vendor')
+        navigate('/vendor-dashboard')
+      }
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [navigate])
+
+  const openGoogleLogin = () => {
+    window.open('/api/auth/google/start?role=vendor', 'google-login', 'width=520,height=700')
+  }
+
   async function submit(e) {
     e.preventDefault()
     setError('')
@@ -17,7 +32,7 @@ export default function VendorLogin() {
     try {
       const res = await loginVendor(email, password)
       if (res?.token && res.user?.role === 'vendor') {
-        setAuthToken(res.token)
+        setAuthToken(res.token, 'vendor')
         navigate('/vendor-dashboard')
       } else {
         setError('Invalid vendor credentials')
@@ -98,6 +113,35 @@ export default function VendorLogin() {
             onMouseLeave={e => !loading && (e.target.style.opacity = '1')}
           >
             {loading ? 'Signing in...' : 'Sign in as Vendor'}
+          </button>
+
+          {/* Google Login */}
+          <button
+            type="button"
+            onClick={openGoogleLogin}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: '#f5f5f5',
+              color: '#333',
+              border: '2px solid #e0e0e0',
+              borderRadius: '8px',
+              fontSize: '1em',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.3s',
+              marginBottom: '12px'
+            }}
+            onMouseEnter={e => {
+              e.target.style.background = '#ece8ff'
+              e.target.style.borderColor = '#764ba2'
+            }}
+            onMouseLeave={e => {
+              e.target.style.background = '#f5f5f5'
+              e.target.style.borderColor = '#e0e0e0'
+            }}
+          >
+            🔑 Continue with Google
           </button>
 
           {/* Forgot Password Link */}

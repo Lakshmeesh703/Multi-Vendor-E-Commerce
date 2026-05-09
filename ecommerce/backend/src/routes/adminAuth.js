@@ -4,7 +4,6 @@ const { Pool } = require('pg');
 const Admin = require('../models/Admin');
 const { registerRole, loginRole } = require('../controllers/authController');
 const { verifyAdmin } = require('../middleware/roleAuth');
-const Product = require('../models/product_mongo');
 const { loginLimiter } = require('../middleware/rateLimiters');
 
 const pool = new Pool({ connectionString: process.env.SUPABASE_DB_URL || process.env.DATABASE_URL });
@@ -14,23 +13,26 @@ router.post('/login', loginLimiter, (req, res) => loginRole(req, res, Admin, 'ad
 
 router.get('/summary', verifyAdmin, async (req, res) => {
 	try {
-		const [usersRes, vendorsRes, ordersRes, salesRes, pendingVendorsRes] = await Promise.all([
+		const [usersRes, vendorsRes, ordersRes, salesRes, pendingVendorsRes, productsRes, dbRes] = await Promise.all([
 			pool.query('SELECT COUNT(*)::int AS count FROM users'),
 			pool.query('SELECT COUNT(*)::int AS count FROM vendors'),
 			pool.query('SELECT COUNT(*)::int AS count FROM orders'),
 			pool.query('SELECT COALESCE(SUM(total_amount), 0)::numeric AS total FROM orders'),
 			pool.query("SELECT COUNT(*)::int AS count FROM vendors WHERE approval_status = 'pending'"),
+			pool.query('SELECT COUNT(*)::int AS count FROM product_snapshots'),
+			// database info: name and human-readable size
+			pool.query("SELECT current_database() AS name, pg_size_pretty(pg_database_size(current_database())) AS size"),
 		]);
-
-		const products = await Product.countDocuments();
 
 		res.json({
 			users: usersRes.rows[0].count,
 			vendors: vendorsRes.rows[0].count,
 			orders: ordersRes.rows[0].count,
 			totalSales: Number(salesRes.rows[0].total || 0),
+			dbName: dbRes?.rows?.[0]?.name || null,
+			dbSize: dbRes?.rows?.[0]?.size || null,
 			pendingVendors: pendingVendorsRes.rows[0].count,
-			products,
+			products: productsRes.rows[0].count,
 		});
 	} catch (err) {
 		res.status(500).json({ error: err.message });
@@ -52,6 +54,19 @@ router.post('/vendors/:vendorId/approve', verifyAdmin, async (req, res) => {
 	try {
 		const result = await pool.query(
 			"UPDATE vendors SET approval_status = 'approved' WHERE id = $1 RETURNING id",
+			[req.params.vendorId]
+		);
+		if (!result.rows[0]) return res.status(404).json({ error: 'Vendor not found' });
+		res.json({ ok: true, vendorId: result.rows[0].id });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+router.post('/vendors/:vendorId/reject', verifyAdmin, async (req, res) => {
+	try {
+		const result = await pool.query(
+			"UPDATE vendors SET approval_status = 'rejected' WHERE id = $1 RETURNING id",
 			[req.params.vendorId]
 		);
 		if (!result.rows[0]) return res.status(404).json({ error: 'Vendor not found' });

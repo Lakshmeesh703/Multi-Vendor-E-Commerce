@@ -4,6 +4,7 @@ import { addToCart, addToWishlist, cleanupCart, createOrder, fetchCart, fetchPro
 import { adminStats, categories, featuredProducts, vendorHighlights } from './data'
 import LoginPage from './pages/LoginPage'
 import VendorDashboard from './pages/VendorDashboard'
+import DemoVendorLogin from './pages/DemoVendorLogin'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminLogin from './pages/AdminLogin'
 import VendorLogin from './pages/VendorLogin'
@@ -11,12 +12,88 @@ import CustomerLogin from './pages/CustomerLogin'
 import CustomerDashboard from './pages/CustomerDashboard'
 import PasswordResetPage from './pages/PasswordResetPage'
 
+const PRODUCT_CACHE_KEY = 'marketwave_product_cache'
+
 function formatPrice(value) {
-  if (value === undefined || value === null) return '₹0.00'
-  if (typeof value === 'number') {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value)
+  const amount = toINRAmount(value)
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount)
+}
+
+function toINRAmount(value) {
+  if (value === undefined || value === null) return 0
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+  if (typeof value === 'string') {
+    const normalized = value.replace(/[^0-9.-]/g, '')
+    const parsed = Number(normalized)
+    return Number.isFinite(parsed) ? parsed : 0
   }
-  return String(value)
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function getProductCache() {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = window.localStorage.getItem(PRODUCT_CACHE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function setProductCache(cache) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(cache))
+  } catch {}
+}
+
+function rememberProductSnapshot(product) {
+  if (!product || typeof product !== 'object') return
+  const productId = product._id || product.id || product.product_mongo_id
+  if (!productId) return
+  const cache = getProductCache()
+  cache[String(productId)] = {
+    _id: String(productId),
+    title: product.title || 'Product',
+    description: product.description || product.subtitle || '',
+    subtitle: product.subtitle || product.description || '',
+    price: toINRAmount(product.price),
+    vendor_id: product.vendor_id || null,
+    currency: (product.currency || 'INR').toUpperCase(),
+    gradient: product.gradient,
+  }
+  setProductCache(cache)
+}
+
+function getRememberedProduct(productId) {
+  if (!productId) return null
+  const cache = getProductCache()
+  return cache[String(productId)] || null
+}
+
+function hydrateCartWithCache(cartData) {
+  const items = Array.isArray(cartData?.items) ? cartData.items : []
+  return {
+    ...cartData,
+    items: items.map((item) => {
+      const cached = item.product || getRememberedProduct(item.product_mongo_id)
+      const fallbackPrice = toINRAmount(cached?.price)
+      return {
+        ...item,
+        unit_price: toINRAmount(item.unit_price ?? fallbackPrice),
+        product: cached
+          ? {
+              ...cached,
+              price: toINRAmount(cached.price ?? item.unit_price),
+              currency: (cached.currency || 'INR').toUpperCase(),
+            }
+          : null,
+      }
+    }),
+  }
 }
 
 function useMarketplaceFilters(initial = {}) {
@@ -197,15 +274,29 @@ function ListingPreview() {
   }, [filters])
 
   const handleAddCart = async (productOrId) => {
-    if (!getAuthToken()) {
-      alert('Please log in to add items to your cart')
-      navigate('/customer/login')
-      return
-    }
     const productId = resolveProductId(productOrId)
     if (!productId) return
-    await addToCart(productId, 1)
-    navigate('/cart')
+    try {
+      let snapshot = null
+      if (typeof productOrId === 'object' && productOrId !== null) {
+        rememberProductSnapshot(productOrId)
+        snapshot = {
+          product_mongo_id: String(productId),
+          title: productOrId.title || 'Product',
+          description: productOrId.description || productOrId.subtitle || '',
+          price: toINRAmount(productOrId.price),
+          currency: (productOrId.currency || 'INR').toUpperCase(),
+          vendor_id: productOrId.vendor_id || null,
+          images: productOrId.images || [],
+        }
+      }
+      await addToCart(productId, 1, snapshot)
+      // Small delay to ensure backend has saved the item
+      await new Promise(resolve => setTimeout(resolve, 500))
+      navigate('/cart')
+    } catch (e) {
+      alert(`Unable to add item to cart: ${e?.message || 'Unknown error'}`)
+    }
   }
 
   const handleAddWishlist = async (productOrId) => {
@@ -283,15 +374,16 @@ function ProductsPage() {
   }
 
   const handleAddCart = async (productOrId) => {
-    if (!getAuthToken()) {
-      alert('Please log in to add items to your cart')
-      navigate('/customer/login')
-      return
-    }
     const productId = resolveProductId(productOrId)
     if (!productId) return
-    await addToCart(productId, 1)
-    navigate('/cart')
+    try {
+      await addToCart(productId, 1)
+      // Small delay to ensure backend has saved the item
+      await new Promise(resolve => setTimeout(resolve, 500))
+      navigate('/cart')
+    } catch (e) {
+      alert(`Unable to add item to cart: ${e?.message || 'Unknown error'}`)
+    }
   }
 
   const handleToggleWishlist = async (productOrId) => {
@@ -388,8 +480,24 @@ function ProductDetailPage() {
               }
               const resolvedId = product._id || product.id || productId
               if (!resolvedId) return
-              await addToCart(resolvedId, 1)
-              navigate('/cart')
+              try {
+                rememberProductSnapshot(product)
+                const snapshot = {
+                  product_mongo_id: String(resolvedId),
+                  title: product.title || 'Product',
+                  description: product.description || product.subtitle || '',
+                  price: toINRAmount(product.price),
+                  currency: (product.currency || 'INR').toUpperCase(),
+                  vendor_id: product.vendor_id || null,
+                  images: product.images || [],
+                }
+                await addToCart(resolvedId, 1, snapshot)
+                // Small delay to ensure backend has saved the item
+                await new Promise(resolve => setTimeout(resolve, 500))
+                navigate('/cart')
+              } catch (e) {
+                alert(`Unable to add item to cart: ${e?.message || 'Unknown error'}`)
+              }
             }}
           >
             Add to Cart
@@ -420,13 +528,28 @@ function CartPage() {
   const [cart, setCart] = useState({ items: [] })
   const navigate = useNavigate()
 
-  const refresh = () => fetchCart().then(setCart).catch(() => setCart({ items: [] }))
+  const refreshHydrated = async () => {
+    try {
+      const data = await fetchCart()
+      const hydrated = hydrateCartWithCache(data)
+      setCart(hydrated)
+    } catch (err) {
+      console.error('Failed to fetch cart:', err)
+      setCart({ items: [] })
+    }
+  }
 
   useEffect(() => {
-    refresh()
+    refreshHydrated()
+    // Also refetch after a short delay to catch any race conditions
+    const timer = setTimeout(refreshHydrated, 500)
+    return () => clearTimeout(timer)
   }, [])
 
-  const subtotal = cart.items.reduce((sum, item) => sum + (Number(item.product?.price || 0) * item.quantity), 0)
+  const subtotal = cart.items.reduce((sum, item) => {
+    const unitPrice = toINRAmount(item.product?.price ?? item.unit_price)
+    return sum + (unitPrice * item.quantity)
+  }, 0)
   const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
@@ -442,8 +565,8 @@ function CartPage() {
               <p>{item.product?.subtitle || item.product?.description}</p>
             </div>
             <div className="cart-item-actions">
-              <div>{formatPrice(item.product?.price)}</div>
-              <button className="ghost-btn" type="button" onClick={async () => { await removeFromCart(item.product_mongo_id); refresh() }}>Remove</button>
+              <div>{formatPrice(item.product?.price ?? item.unit_price)}</div>
+              <button className="ghost-btn" type="button" onClick={async () => { await removeFromCart(item.product_mongo_id); refreshHydrated() }}>Remove</button>
             </div>
           </div>
         ))}
@@ -454,7 +577,7 @@ function CartPage() {
         <p>Delivery: Free</p>
         <strong>Total: {formatPrice(subtotal)}</strong>
         <button className="primary-btn wide" onClick={() => navigate('/checkout')}>Proceed to Checkout</button>
-        <button className="secondary-btn wide" onClick={async () => { await cleanupCart(); refresh() }}>Reset quantities</button>
+        <button className="secondary-btn wide" onClick={async () => { await cleanupCart(); refreshHydrated() }}>Reset quantities</button>
       </aside>
     </section>
   )
@@ -478,10 +601,13 @@ function CheckoutPage() {
       navigate('/customer/login')
       return
     }
-    fetchCart().then(setCart).catch(() => setCart({ items: [] }))
+    fetchCart().then((data) => setCart(hydrateCartWithCache(data))).catch(() => setCart({ items: [] }))
   }, [token, navigate])
 
-  const subtotal = cart.items.reduce((sum, item) => sum + (Number(item.product?.price || 0) * item.quantity), 0)
+  const subtotal = cart.items.reduce((sum, item) => {
+    const unitPrice = toINRAmount(item.product?.price ?? item.unit_price)
+    return sum + (unitPrice * item.quantity)
+  }, 0)
 
   const handlePay = async () => {
     if (!name || !phone || !address) {
@@ -499,7 +625,23 @@ function CheckoutPage() {
       const payload = {
         user_id: userId,
         shipping_address: { name, phone, address, city, pincode },
-        items: cart.items.map(i => ({ product_mongo_id: i.product_mongo_id, quantity: i.quantity, vendor_id: i.product?.vendor_id || i.vendor_id, unit_price: i.product?.price })),
+        items: cart.items.map(i => ({
+          product_mongo_id: i.product_mongo_id,
+          quantity: i.quantity,
+          vendor_id: i.product?.vendor_id || i.vendor_id,
+          unit_price: toINRAmount(i.product?.price ?? i.unit_price),
+          product_snapshot: i.product
+            ? {
+                product_mongo_id: i.product_mongo_id,
+                title: i.product.title || 'Product',
+                description: i.product.description || '',
+                category: i.product.category || '',
+                vendor_id: i.product.vendor_id || i.vendor_id || null,
+                currency: i.product.currency || 'INR',
+                price: toINRAmount(i.product.price ?? i.unit_price),
+              }
+            : null,
+        })),
         currency: 'INR',
         payment_method: 'credit_card'
       }
@@ -560,7 +702,7 @@ function WishlistPage() {
           {wishlist.items.map(item => (
             <div key={item.product_mongo_id} className="table-row wishlist-row">
               <span>{item.product?.title || item.product_mongo_id}</span>
-              <span>{formatPrice(item.product?.price)}</span>
+              <span>{formatPrice(item.product?.price ?? item.unit_price)}</span>
               <button className="ghost-btn" type="button" onClick={async () => { await removeFromWishlist(item.product_mongo_id); refresh() }}>Remove</button>
             </div>
           ))}
@@ -663,6 +805,7 @@ function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/vendor/login" element={<VendorLogin />} />
+        <Route path="/demo-login/vendor" element={<DemoVendorLogin />} />
         <Route path="/customer/login" element={<CustomerLogin />} />
         <Route path="/reset-password" element={<PasswordResetPage />} />
         <Route path="/vendor-dashboard" element={<VendorDashboard />} />

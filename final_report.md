@@ -175,7 +175,7 @@ Describe or list your screenshots:
 ## 12. Future Improvements
 1. Add role-based dashboard analytics for customers, vendors, and admins.
 2. Implement real-time notifications for order updates and inventory changes.
-3. Add payment gateway integration and transaction history export.
+3. Add payment gateway integration and tran saction history export.
 
 ## 13. Conclusion
 This project demonstrates a multi-role marketplace built with Flask, PostgreSQL, and MongoDB. It uses SQL for transactional consistency and MongoDB for a flexible product catalog. The application supports customers, vendors, and admins with secure workflows, product management, and reporting.

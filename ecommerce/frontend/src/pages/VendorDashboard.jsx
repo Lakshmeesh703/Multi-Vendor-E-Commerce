@@ -84,7 +84,7 @@ export default function VendorDashboard() {
   const [editing, setEditing] = useState({})
 
   useEffect(() => {
-    const userId = getAuthUserId()
+    const userId = getAuthUserId('vendor')
     setUser({ id: userId, name: 'Tech Vendor' })
   }, [])
 
@@ -140,6 +140,7 @@ export default function VendorDashboard() {
         category: newProduct.category,
         description: newProduct.description,
         price: Number(newProduct.price),
+        images: [],
         inventory: {
           sku: newProduct.sku,
           quantity: Number(newProduct.quantity || 0),
@@ -427,7 +428,7 @@ export default function VendorDashboard() {
                       id="vendor-sku"
                       value={newProduct.sku}
                       onChange={(e) => setNewProduct((p) => ({ ...p, sku: e.target.value }))}
-                      placeholder="Optional"
+                      placeholder="Required for inventory tracking"
                     />
                   </div>
                   <div className="form-group">
@@ -448,7 +449,7 @@ export default function VendorDashboard() {
                       id="vendor-description"
                       value={newProduct.description}
                       onChange={(e) => setNewProduct((p) => ({ ...p, description: e.target.value }))}
-                      placeholder="Optional"
+                      placeholder="Describe the product for customers"
                     />
                   </div>
 
